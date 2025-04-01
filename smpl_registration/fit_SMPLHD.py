@@ -132,7 +132,7 @@ if __name__ == "__main__":
     parser.add_argument('save_path', type=str, help='save path for all scans')
     parser.add_argument("--config-path", "-c", type=Path, default="config.yml",
                         help="Path to yml file with config")
-    parser.add_argument('-gender', type=str, default='male') # can be female
+    parser.add_argument('-gender', type=str, default='male_v.1.0.0') # can be female
     parser.add_argument('-smpl_pkl', type=str, default=None)  # In case SMPL fit is already available
     parser.add_argument('--display', default=False, action='store_true')
     parser.add_argument('-hands', default=False, action='store_true', help='use SMPL+hand model or not')

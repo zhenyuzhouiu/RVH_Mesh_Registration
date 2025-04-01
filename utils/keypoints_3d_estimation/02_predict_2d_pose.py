@@ -9,7 +9,10 @@ from pathlib import Path
 
 import cv2
 import numpy as np
-import pyopenpose as op
+import os
+import sys
+sys.path.append('/usr/local/python')
+from openpose import pyopenpose as op
 
 
 def preset_params(args):
@@ -37,6 +40,7 @@ def preset_params(args):
 
 
 def filter_background_detections(detections):
+    
     if detections is not None and detections.ndim == 3:
         mean_confidence = np.mean(detections[:, :, 2], axis=1)
         index = np.argmax(mean_confidence)
@@ -49,8 +53,8 @@ def filter_background_detections(detections):
 def main(args):
     # custom params for the model (refer to include/openpose/flags.hpp for more parameters)
     op_params = dict()
-    op_params["model_folder"] = "/openpose/models/"
-    op_params["net_resolution"] = "720x480"
+    op_params["model_folder"] = "/home/zhenyuzhou/Desktop/OpenSource/openpose/models/"
+    op_params["net_resolution"] = "480x320"
     op_params["scale_number"] = 3
     op_params["scale_gap"] = 0.25
     op_params.update(preset_params(args))
@@ -82,10 +86,14 @@ def main(args):
     for input_image_path, datum in zip(input_image_paths, op_vector_datum):
         input_name = input_image_path.stem
         results[input_name] = {
-            "pose_keypoints_2d": filter_background_detections(datum.getPoseKeypoints()),
-            "face_keypoints_2d": filter_background_detections(datum.getFaceKeypoints()),
-            "hand_left_keypoints_2d": filter_background_detections(datum.getHandKeypointsL()),
-            "hand_right_keypoints_2d": filter_background_detections(datum.getHandKeypointsR())
+            # "pose_keypoints_2d": filter_background_detections(datum.getPoseKeypoints()),
+            # "face_keypoints_2d": filter_background_detections(datum.getFaceKeypoints()),
+            # "hand_left_keypoints_2d": filter_background_detections(datum.getHandKeypointsL()),
+            # "hand_right_keypoints_2d": filter_background_detections(datum.getHandKeypointsR())
+            "pose_keypoints_2d": filter_background_detections(datum.poseKeypoints),
+            "face_keypoints_2d": filter_background_detections(datum.faceKeypoints),
+            "hand_left_keypoints_2d": filter_background_detections(datum.handKeypoints[0]),
+            "hand_right_keypoints_2d": filter_background_detections(datum.handKeypoints[1])
         }
 
         # optionally save visualisations

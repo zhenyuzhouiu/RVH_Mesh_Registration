@@ -25,7 +25,7 @@ from utils.configs import load_config
 
 def initialize_keypoints_3d(centers, num, smpl_models_path, device="cpu"):
     # load 25 keypoints from SMPL
-    prior = get_prior(smpl_models_path, gender='male')
+    prior = get_prior(smpl_models_path, gender='male_v.1.1.0')
 
     batch_sz = centers.shape[0]
     pose_init = torch.zeros((batch_sz, 72))

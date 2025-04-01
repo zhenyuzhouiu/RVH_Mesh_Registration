@@ -27,6 +27,11 @@ from lib.smpl.smplpytorch.smplpytorch.native.webuser.verts import verts_core
 
 
 def backwards_compatibility_replacements(dd):
+    """Change the keys in the dictionary to be compatible with the current version of the model.
+
+    Args:
+        dd (_type_): _description_
+    """
     # replacements
     if 'default_v' in dd:
         dd['v_template'] = dd['default_v']
@@ -50,12 +55,20 @@ def backwards_compatibility_replacements(dd):
 
 
 def ready_arguments(fname_or_dict):
+    """By using the chumpy library, it will save the computation graph and derivative of each variable.
+
+    Args:
+        fname_or_dict (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
     if not isinstance(fname_or_dict, dict):
         dd = pickle.load(open(fname_or_dict, 'rb'), encoding='latin-1')
     else:
         dd = fname_or_dict
-
-    backwards_compatibility_replacements(dd)
+        
+    backwards_compatibility_replacements(dd) # change names of the key
 
     want_shapemodel = 'shapedirs' in dd
     nposeparms = dd['kintree_table'].shape[1] * 3
@@ -64,9 +77,10 @@ def ready_arguments(fname_or_dict):
         dd['trans'] = np.zeros(3)
     if 'pose' not in dd:
         dd['pose'] = np.zeros(nposeparms)
-    if 'shapedirs' in dd and 'betas' not in dd:
+    if 'shapedirs' in dd and 'betas' not in dd:  # betas for shape parameters
         dd['betas'] = np.zeros(dd['shapedirs'].shape[-1])
 
+    # make sure everything is chumpy
     for s in ['v_template', 'weights', 'posedirs', 'pose', 'trans', 'shapedirs', 'betas', 'J']:
         if (s in dd) and not hasattr(dd[s], 'dterms'):
             dd[s] = ch.array(dd[s])
@@ -74,6 +88,7 @@ def ready_arguments(fname_or_dict):
     if want_shapemodel:
         dd['v_shaped'] = dd['shapedirs'].dot(dd['betas']) + dd['v_template']
         v_shaped = dd['v_shaped']
+        # using the J_regressor to estimate the joint locations from the shape of 3D model
         J_tmpx = MatVecMult(dd['J_regressor'], v_shaped[:, 0])
         J_tmpy = MatVecMult(dd['J_regressor'], v_shaped[:, 1])
         J_tmpz = MatVecMult(dd['J_regressor'], v_shaped[:, 2])

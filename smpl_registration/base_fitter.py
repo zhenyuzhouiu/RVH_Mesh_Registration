@@ -70,29 +70,36 @@ class BaseFitter(object):
         raise NotImplemented
 
     def init_smpl(self, batch_sz, gender, pose=None, betas=None, trans=None, flip=False):
-        """
-        initialize a smpl batch model
+        """Initialize a batch of smpl model
+
         Args:
-            batch_sz:
-            gender:
-            flip: rotate smpl around z-axis by 180 degree, required for kinect point clouds, which has different coordinate
-            from scans
+            batch_sz (_type_): _description_
+            gender (_type_): _description_
+            pose (_type_, optional): pose parameters for pose blened shape. Defaults to None.
+            betas (_type_, optional): shape parameters for shape blended shape. Defaults to None.
+            trans (_type_, optional): _description_. Defaults to None.
+            flip (bool, optional): rotate smpl around z-axis by 180 degree, required for kinect point clouds, which has different coordinate from scans. Defaults to False.
 
-        Returns: batch smplh model
-
+        Returns:
+            _type_: batch smplh model
         """
+        # ===== Model parameter betas, pose, and trans initialization  =====
+        # region
         # sp = SmplPaths(gender=gender)
         # smpl_faces = sp.get_faces()
         # th_faces = torch.tensor(smpl_faces.astype('float32'), dtype=torch.long).to(self.device)
-        num_betas = 10
-        prior = get_prior(self.model_root, gender=gender)
+        num_betas = 10  # smplh only allows 10 shape parameters
+        # get the prior mean and covariance of the pose parameters
+        # and it will use the Mahalanobis distance to measure the difference between the pose parameters and the prior
+        prior = get_prior(self.model_root, gender=gender) 
         total_pose_num = SMPLH_POSE_PRAMS_NUM if self.hands else SMPL_POSE_PRAMS_NUM
         pose_init = torch.zeros((batch_sz, total_pose_num))
         if pose is None:
-            # initialize hand pose from mean
+            # initialize hand pose from mean TODO by Zhenyu: (1 head + 21 body + 2 hand = 24 keypoints)?
             pose_init[:, 3:SMPLH_HANDPOSE_START] = prior.mean
             if self.hands:
-                hand_mean = mean_hand_pose(self.model_root)
+                # from the priors get the left hand and right hand mean pose
+                hand_mean = mean_hand_pose(self.model_root) 
                 hand_init = torch.tensor(hand_mean, dtype=torch.float).to(self.device)
             else:
                 hand_init = torch.zeros((batch_sz, SMPL_HAND_POSE_NUM))
@@ -106,12 +113,20 @@ class BaseFitter(object):
         beta_init = torch.zeros((batch_sz, num_betas)) if betas is None else betas
         trans_init = torch.zeros((batch_sz, 3)) if trans is None else trans
         betas, pose, trans = beta_init, pose_init, trans_init
+        # endregion
+        
         # Init SMPL, pose with mean smpl pose, as in ch.registration
         # smpl = SMPLHPyTorchWrapperBatch(self.model_root, batch_sz, betas, pose, trans,
         #                                 num_betas=num_betas, device=self.device, gender=gender).to(self.device)
-        smpl = SMPLPyTorchWrapperBatch(self.model_root, batch_sz, betas, pose, trans,
-                                        num_betas=num_betas, device=self.device,
-                                       gender=gender, hands=self.hands).to(self.device)
+        smpl = SMPLPyTorchWrapperBatch(self.model_root, 
+                                       batch_sz,
+                                       betas, 
+                                       pose, 
+                                       trans,
+                                       num_betas=num_betas, 
+                                       device=self.device,
+                                       gender=gender, 
+                                       hands=self.hands).to(self.device)
         return smpl
 
     @staticmethod
@@ -204,7 +219,7 @@ class BaseFitter(object):
 
     def load_j3d(self, pose_files):
         """
-        load 3d body keypoints
+        load 3d body, face, and hand keypoints with total 137 different keypoints
         Args:
             pose_files: json files containing the body keypoints location
 
@@ -221,6 +236,16 @@ class BaseFitter(object):
 
     @staticmethod
     def load_scans(scans, device='cuda:0', ret_cent=False):
+        """Load the scans as pytorch3d meshes, and return the centers of the scans if required.
+
+        Args:
+            scans (_type_): _description_
+            device (str, optional): _description_. Defaults to 'cuda:0'.
+            ret_cent (bool, optional): _description_. Defaults to False.
+
+        Returns:
+            _type_: _description_
+        """
         verts, faces, centers = [], [], []
         for scan in scans:
             print('scan path ...', scan)
@@ -232,7 +257,7 @@ class BaseFitter(object):
             verts.append(v)
             faces.append(f)
             centers.append(torch.mean(v, 0))
-        th_scan_meshes = Meshes(verts, faces).to(device)
+        th_scan_meshes = Meshes(verts, faces).to(device) # pytorch3d meshes
         if ret_cent:
             return th_scan_meshes, torch.stack(centers, 0).to(device)
         return th_scan_meshes
@@ -240,7 +265,8 @@ class BaseFitter(object):
     def viz_fitting(self, smpl, th_scan_meshes, ind=0,
                     smpl_vc=np.array([0, 1, 0]), **kwargs):
         verts, _, _, _ = smpl()
-        smpl_mesh = Mesh(v=verts[ind].cpu().detach().numpy(), f=smpl.faces.cpu().numpy())
+        smpl_mesh = Mesh(v=verts[ind].cpu().detach().numpy(), 
+                         f=smpl.faces.cpu().numpy())
         scan_mesh = Mesh(v=th_scan_meshes.verts_list()[ind].cpu().detach().numpy(),
                          f=th_scan_meshes.faces_list()[ind].cpu().numpy(), vc=smpl_vc)
         self.mv.set_dynamic_meshes([scan_mesh, smpl_mesh])

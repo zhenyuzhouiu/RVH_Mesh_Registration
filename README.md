@@ -15,7 +15,7 @@ Most dependencies are included in *requirement.txt* file, the following modules 
 2. Openpose library. See [lifting 2D poses](docs/lift_kpts.md).
 
 ## <a name="prep-model"></a> Prepare model files
-We provide SMPL or SMPL+H registration in this repo. Depending on your model choice, you should prepare the corresponding model files, for details please check [here](docs/prep_smpl.md).
+We provide SMPL or SMPL+H registration in this repo. Depending on your model choice, you should prepare the corresponding model files, for details please check [here](docs/prep_smpl.md). From the [error #9](https://github.com/bharat-b7/RVH_Mesh_Registration/issues/9), it needs the SMPL v1.1 for openpose stages but need SMPL v1.0 for fitting SMPL fit_SMPL.py to 3D pose data (after openpose stages).
 
 ## <a name="reg-methods"></a> Different registration methods
 We provide various methods for registering SMPL or SMPL+H to scans or point clouds:

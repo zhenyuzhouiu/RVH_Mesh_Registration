@@ -1,5 +1,5 @@
 # SMPL directories
-SMPL_MODELS_PATH: "/BS/xxie2020/static00/mysmpl/smplh"
+SMPL_MODELS_PATH: "assets"
 SMPL_ASSETS_PATH: "/BS/xxie2020/static00/mysmpl/smpl/assets"
 
 # Keypoints directories for kinect

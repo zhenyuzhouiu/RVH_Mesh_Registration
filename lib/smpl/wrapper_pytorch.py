@@ -22,6 +22,8 @@ class SMPLPyTorchWrapperBatch(nn.Module):
                  gender='male', num_betas=300, hands=False,
                  device='cuda:0'):
         super(SMPLPyTorchWrapperBatch, self).__init__()
+        # ===== Model parameters: betas, pose, trans, offsets, and gender =====
+        # region
         self.model_root = model_root
         self.hands = hands # use smpl-h or not
 
@@ -51,17 +53,23 @@ class SMPLPyTorchWrapperBatch(nn.Module):
 
         # self.faces = faces
         self.gender = gender
+        # endregion
 
-        # pytorch smpl
+        # pytorch smpl by loading the pkl file and save the computation graph and derivate by chumpy
         self.smpl = SMPL_Layer(center_idx=0, gender=gender, num_betas=num_betas,
                                model_root=str(model_root), hands=hands)
         self.faces = self.smpl.th_faces.to(device) # XH: no need to input face, it is loaded from model file
 
-        # Landmarks
+        # Landmarks from the loaded body, face, and hand joint regressors
         self.body25_reg_torch, self.face_reg_torch, self.hand_reg_torch = \
             torch_pose_obj_data(self.model_root, batch_size=batch_sz)
 
     def forward(self):
+        """_summary_
+
+        Returns:
+            _type_: _description_
+        """
         verts, jtr, tposed, naked = self.smpl(self.pose,
                                               th_betas=self.betas,
                                               th_trans=self.trans,
@@ -69,7 +77,7 @@ class SMPLPyTorchWrapperBatch(nn.Module):
         return verts, jtr, tposed, naked
 
     def get_landmarks(self):
-        """Computes body25 joints for SMPL along with hand and facial landmarks"""
+        """Computes body25 joints for SMPL along with hand and facial landmarks from the body, face, and hand joint regressors from shape of the 3D model"""
 
         verts, _, _, _ = self.smpl(self.pose,
                                   th_betas=self.betas,
@@ -93,13 +101,15 @@ class SMPLPyTorchWrapperBatchSplitParams(nn.Module):
      5. other betas
     """
 
-    def __init__(self, model_root, batch_sz,
-                 top_betas=None,
-                 other_betas=None,
-                 global_pose=None,
-                 body_pose=None,
-                 hand_pose=None,
-                 trans=None,
+    def __init__(self, 
+                 model_root, 
+                 batch_sz,
+                 top_betas=None, # for the shape parameters
+                 other_betas=None, # for the shape parameters
+                 global_pose=None, # for the global orientation
+                 body_pose=None, # for the body pose
+                 hand_pose=None, # for the hand pose
+                 trans=None, # for the translation
                  offsets=None,
                  faces=None,
                  gender='male',
@@ -107,7 +117,7 @@ class SMPLPyTorchWrapperBatchSplitParams(nn.Module):
                  num_betas=300):
         super(SMPLPyTorchWrapperBatchSplitParams, self).__init__()
         self.model_root = model_root
-        if top_betas is None:
+        if top_betas is None:  # the first main PCA components for shape 
             self.top_betas = nn.Parameter(torch.zeros(batch_sz, TOP_BETA_NUM))
         else:
             assert top_betas.ndim == 2
@@ -202,14 +212,15 @@ class SMPLPyTorchWrapperBatchSplitParams(nn.Module):
         """
         batch_sz = smpl.pose.shape[0]
         split_smpl = SMPLPyTorchWrapperBatchSplitParams(smpl.model_root,
-                                                         batch_sz,
-                                                         trans=smpl.trans.data,
-                                                         top_betas=smpl.betas.data[:, :TOP_BETA_NUM],
-                                                         other_betas=smpl.betas.data[:, TOP_BETA_NUM:],
-                                                         global_pose=smpl.pose.data[:, :GLOBAL_POSE_NUM],
-                                                         body_pose=smpl.pose.data[:, GLOBAL_POSE_NUM:GLOBAL_POSE_NUM + BODY_POSE_NUM],
-                                                         hand_pose=smpl.pose.data[:, GLOBAL_POSE_NUM + BODY_POSE_NUM:],
-                                                         faces=smpl.faces, gender=smpl.gender,
+                                                        batch_sz,
+                                                        trans=smpl.trans.data,
+                                                        top_betas=smpl.betas.data[:, :TOP_BETA_NUM],
+                                                        other_betas=smpl.betas.data[:, TOP_BETA_NUM:],
+                                                        global_pose=smpl.pose.data[:, :GLOBAL_POSE_NUM],
+                                                        body_pose=smpl.pose.data[:, GLOBAL_POSE_NUM:GLOBAL_POSE_NUM + BODY_POSE_NUM],
+                                                        hand_pose=smpl.pose.data[:, GLOBAL_POSE_NUM + BODY_POSE_NUM:],
+                                                        faces=smpl.faces, 
+                                                        gender=smpl.gender,
                                                         hands=smpl.hands)
         return split_smpl
 

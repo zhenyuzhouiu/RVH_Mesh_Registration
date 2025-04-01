@@ -11,6 +11,19 @@ import numpy as np
 
 
 def get_prior(model_root, gender='male', precomputed=True):
+    """_summary_
+
+    Args:
+        model_root (_type_): _description_
+        gender (str, optional): _description_. Defaults to 'male'.
+        precomputed (bool, optional): _description_. Defaults to True.
+
+    Raises:
+        NotImplemented: _description_
+
+    Returns:
+        _type_: _description_
+    """
     if precomputed:
         prior = Prior(sm=None, model_root=model_root)
         return prior['Generic']
@@ -19,7 +32,21 @@ def get_prior(model_root, gender='male', precomputed=True):
 
 
 class ThMahalanobis(object):
+    """Mahalanobis distance for pytorch tensors by \[ D_M(x) = \sqrt{(x - \mu)^T \Sigma^{-1} (x - \mu)} \]
+    马氏距离可以用于衡量姿态参数与某个先验分布之间的差异
+    Args:
+        object (_type_): _description_
+    """
     def __init__(self, mean, prec, prefix, end=66, device="cuda:0"):
+        """_summary_
+
+        Args:
+            mean (_type_): mean vector of the prior
+            prec (_type_): inverse covariance matrix of the prior
+            prefix (_type_): _description_
+            end (int, optional): _description_. Defaults to 66.
+            device (str, optional): _description_. Defaults to "cuda:0".
+        """
         self.mean = torch.tensor(mean.astype('float32'), requires_grad=False).unsqueeze(axis=0).to(device)
         self.prec = torch.tensor(prec.astype('float32'), requires_grad=False).to(device)
         self.prefix = prefix
@@ -51,6 +78,7 @@ class Prior(object):
             self.priors = {'Generic': self.create_prior_from_samples(all_samples)}
         else:
             # Load pre-computed mean and variance, this prior is adapted for smplh model
+            # TODO by Zhenyu: how to calculate the prior for smpl model?
             file = join(model_root, 'priors', 'body_prior.pkl')
             dat = pkl.load(open(file, 'rb'))
             self.priors = {'Generic': ThMahalanobis(dat['mean'],

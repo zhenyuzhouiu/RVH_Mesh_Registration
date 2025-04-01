@@ -12,12 +12,18 @@ from pytorch3d.renderer import PerspectiveCameras
 from torch.nn.functional import mse_loss
 
 def torch_pose_obj_data(model_root, batch_size=1):
-    """
-    Keypoint operators on SMPL verts.
+    """Load the body, face, and hand joint regressors.
+
+    Args:
+        model_root (_type_): _description_
+        batch_size (int, optional): _description_. Defaults to 1.
+
+    Returns:
+        _type_: _description_
     """
     body25_reg = pkl.load(open(join(model_root, 'regressors/body_25_openpose_joints.pkl'), 'rb'), encoding="latin1").T
     face_reg = pkl.load(open(join(model_root, 'regressors/face_70_openpose_joints.pkl'), 'rb'), encoding="latin1").T
-    hand_reg = pkl.load(open(join(model_root, 'regressors/hands_42_openpose_joints.pkl'), 'rb'), encoding="latin1").T
+    hand_reg = pkl.load(open(join(model_root, 'regressors/hands_42_openpose_joints.pkl'), 'rb'), encoding="latin1").T  # contains 21+21 joints
     body25_reg_torch = torch.sparse_coo_tensor(body25_reg.nonzero(), body25_reg.data, body25_reg.shape)
     face_reg_torch = torch.sparse_coo_tensor(face_reg.nonzero(), face_reg.data, face_reg.shape)
     hand_reg_torch = torch.sparse_coo_tensor(hand_reg.nonzero(), hand_reg.data, hand_reg.shape)
@@ -204,6 +210,6 @@ def batch_3djoints_loss(pc_bodyjoints, smpl_bodyjoints):
         weights = joint_weights
     weights = weights.to(pc_bodyjoints.device)
     loss = mse_loss(pc_bodyjoints[:, :, :3], smpl_bodyjoints, reduction='none')
-    mse_sum = torch.sum(loss, axis=-1)*pc_bodyjoints[:,:, 3]
+    mse_sum = torch.sum(loss, axis=-1)*pc_bodyjoints[:,:, 3]  # prediction score
     mse_weighted = torch.matmul(mse_sum, weights)
     return torch.mean(mse_weighted)
