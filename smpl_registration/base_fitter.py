@@ -91,7 +91,7 @@ class BaseFitter(object):
         num_betas = 10  # smplh only allows 10 shape parameters
         # get the prior mean and covariance of the pose parameters
         # and it will use the Mahalanobis distance to measure the difference between the pose parameters and the prior
-        prior = get_prior(self.model_root, gender=gender) 
+        prior = get_prior(self.model_root, gender=gender, device=self.device) 
         total_pose_num = SMPLH_POSE_PRAMS_NUM if self.hands else SMPL_POSE_PRAMS_NUM
         pose_init = torch.zeros((batch_sz, total_pose_num))
         if pose is None:

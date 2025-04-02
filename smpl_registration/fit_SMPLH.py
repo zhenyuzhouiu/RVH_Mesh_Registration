@@ -7,6 +7,8 @@ the code is tested
 """
 
 import sys, os
+
+import torch.backends
 sys.path.append(os.getcwd())
 import json
 import torch
@@ -25,6 +27,9 @@ from lib.smpl.wrapper_pytorch import SMPLPyTorchWrapperBatchSplitParams
 
 
 class SMPLHFitter(BaseFitter):
+    def __init__(self, model_root, device='cuda:0', save_name='smpl', debug=False, hands=True):
+        super().__init__(model_root, device, save_name, debug, hands)
+        
     def fit(self, scans, pose_files, gender='male', save_path=None):
         """First optimize the pose only, then optimize the pose and shape
 
@@ -42,7 +47,7 @@ class SMPLHFitter(BaseFitter):
 
         # Load scans and return the center of it, but not centerized the scaned mesh. 
         # Once smpl is registered, move it accordingly.
-        th_scan_meshes, centers = self.load_scans(scans, ret_cent=True)
+        th_scan_meshes, centers = self.load_scans(scans, device=self.device, ret_cent=True)
 
         # Initialization smpl by the center of the scaned mesh without the betas and pose 
         smpl = self.init_smpl(batch_sz, gender, trans=centers)
@@ -170,7 +175,7 @@ class SMPLHFitter(BaseFitter):
 
     def forward_pose_shape(self, th_scan_meshes, smpl, th_pose_3d=None):
         # Get pose prior
-        prior = get_prior(self.model_root, smpl.gender)
+        prior = get_prior(self.model_root, smpl.gender, device=self.device)
 
         # forward
         verts, _, _, _ = smpl()
@@ -212,7 +217,7 @@ class SMPLHFitter(BaseFitter):
             _type_: _description_
         """
         # Get pose prior
-        prior = get_prior(self.model_root, smpl.gender)
+        prior = get_prior(self.model_root, smpl.gender, device=self.device)
 
         # losses
         loss = dict()
@@ -274,7 +279,17 @@ class SMPLHFitter(BaseFitter):
 
 
 def main(args):
-    fitter = SMPLHFitter(args.model_root, debug=args.display, hands=args.hands)
+    if sys.platform.startswith("darwin"):
+        if torch.backends.mps.is_available():
+            device = torch.device("mps")
+        else:
+            device = torch.device("cpu")
+    else:
+        if torch.cuda.is_available():
+            device = torch.device("cuda:0")
+        else:
+            device = torch.device("cpu")
+    fitter = SMPLHFitter(args.model_root, device=device, debug=args.display, hands=args.hands)
     fitter.fit([args.scan_path], [args.pose_file], args.gender, args.save_path)
 
 

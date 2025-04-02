@@ -12,3 +12,6 @@ data
 
 # asstes for running the repo
 assets/*
+
+# DS_Store
+*.DS_Store

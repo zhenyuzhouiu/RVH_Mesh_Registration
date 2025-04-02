@@ -10,7 +10,7 @@ import torch
 import numpy as np
 
 
-def get_prior(model_root, gender='male', precomputed=True):
+def get_prior(model_root, gender='male', precomputed=True, device="cuda:0"):
     """_summary_
 
     Args:
@@ -25,7 +25,7 @@ def get_prior(model_root, gender='male', precomputed=True):
         _type_: _description_
     """
     if precomputed:
-        prior = Prior(sm=None, model_root=model_root)
+        prior = Prior(sm=None, model_root=model_root, device=device)
         return prior['Generic']
     else:
         raise NotImplemented
